@@ -38,6 +38,11 @@ void addBook() {
     printf("Book added successfully!\n");
 }
 
+// ***NOTE***--   fscanf(fp, "%49[^,]", str);
+// Matlab: string me maximum 49 characters daalo jab tak comma na aa jaye.
+// Agar comma aa gaya toh wahi stop kar do (comma ko consume nahi karega, usse agla fscanf handle karega). 
+
+
 // View all books
 void viewBooks() {
     FILE *fp = fopen("books.txt", "r");
@@ -45,23 +50,20 @@ void viewBooks() {
         printf("No books found!\n");
         return;
     }
-        struct Book b ;
-        int flag = 0 ;
+    struct Book b ;
+    int flag = 0 ;
     printf("\n--- All Books in Library ---\n");
-    while (fscanf(fp, "%d, %49[^,], %49[^,], %s", &b.id, b.name, b.author, b.status) != EOF) {
+    while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
         printf("ID=%d, Name=%s, Author=%s, Status=%s\n", b.id, b.name, b.author, b.status);
-            flag = 1 ;
+        flag = 1 ;
     }
-    if(flag!=1){
-        printf("Library is empty!");
+    if(flag==0){
+        printf("Library is empty!\n");
     }
- 
     fclose(fp);
-}             //fscanf(fp, "%49[^,]", str);
-// Matlab: string me maximum 49 characters daalo jab tak comma na aa jaye Agar comma aa gaya
-//  toh wahi stop kar do (comma ko consume nahi karega, usse agla fscanf handle karega).
-                    
-// Search a book by ID
+}            
+
+// Search a book 
 void searchBook() {
     FILE *fp = fopen("books.txt", "r");
     if (fp == NULL) {
@@ -69,27 +71,54 @@ void searchBook() {
         return;
     }
     int found = 0 ;
-    // int id, found = 0;    
-    // printf("Enter Book ID to search: ");
-    // scanf("%d", &id);
-    getchar();
-    char name[100];
-    printf("Enter your Book name which you want to search:- ");
-    fgets(name,sizeof(name),stdin);
-    name[strcspn(name,"\n")]= '\0';
-    struct Book b;
-    while (fscanf(fp, "%d, %49[^,], %49[^,], %s", &b.id, b.name, b.author, b.status) != EOF) {
-        // if (b.id == id) {
-        if(strcmp(name,b.name)==0){
-            printf("Book Found-> ID=%d, Name=%s, Author=%s, Status=%s\n",
-                   b.id, b.name, b.author, b.status);
-            found = 1;
-            break;
+    int opt;
+    printf("Enter 1. when you want to search a Book by its id\nEnter 2. when you want to search Book by its Name\n");
+    scanf("%d",&opt);
+
+    // Search a book by ID
+    if(opt==1){
+        int id;    
+        printf("Enter Book ID to search: ");
+        scanf("%d", &id);
+
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {// yaha (==4) safest method hai fscanf me (!=EOF) ke jagah 
+            if (b.id == id) {                                                                  //jitna format data Read krna hai uska count likhte hai 
+                printf("Book Found-> ID=%d, Name=%s, Author=%s, Status=%s\n",
+                       b.id, b.name, b.author, b.status);
+                found = 1;
+                break;
+            }
+        }
+
+        if (!found) {
+            printf("%d id Book not found in library!\n",id);
         }
     }
 
-    if (!found) {
-        printf("Book not found in library!\n");
+    // Search a book by Name
+    else if(opt==2){
+        getchar();
+        char name[100];
+        printf("Enter your Book name which you want to search:- ");
+        fgets(name,sizeof(name),stdin);
+        name[strcspn(name,"\n")]= '\0';
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if(strcmp(name,b.name)==0){
+                printf("Book Found-> ID=%d, Name=%s, Author=%s, Status=%s\n",
+                       b.id, b.name, b.author, b.status);
+                found = 1;
+                break;
+            }
+        }
+
+        if (!found) {
+            printf("%s Book not found in library!\n",name);
+        }
+    }
+    else{
+        printf("Invalid option\n");
     }
 
     fclose(fp);
@@ -101,37 +130,75 @@ void issueBook() {
     FILE *temp = fopen("temp.txt", "w");
     if (fp == NULL) {
         printf("No books found!\n");
+        if (temp) fclose(temp);
         return;
     }
-        int found = 0;
-    // int id, found = 0;
-    // printf("Enter Book ID to issue: ");
-    // scanf("%d", &id);
-        getchar();
-     char name[100];
-      printf("Enter your Book name which you want to issue:- ");
-    fgets(name,sizeof(name),stdin);
-    name[strcspn(name,"\n")]= '\0';
+    if (temp == NULL) {
+        printf("Error creating temporary file!\n");
+        fclose(fp);
+        return;
+    }
+    int found = 0;
+    
+    int opt;
+    printf("Enter 1. when you want to issue a Book by its id\nEnter 2. when you want to issue Book by its Name\n");
+    scanf("%d",&opt);
 
-    struct Book b;
-    while (fscanf(fp, "%d, %49[^,], %49[^,], %s", &b.id, b.name, b.author, b.status) != EOF) {
-        // if (b.id == id) {
-        if(strcmp(name,b.name)==0){
-            found = 1;
-        printf("id:- %d, Name :- %s,Author name:- %s, status:- %s",b.id,b.name,b.author,b.status);
-            if (strcmp(b.status, "Available") == 0) {
-                strcpy(b.status, "Issued");
-                printf("\nBook issued successfully!\n");
-            } else {
-                printf("Book already issued \n");
+    // Issue a book by its ID:--
+    if(opt==1){
+        int id;
+        printf("Enter Book ID to issue: ");
+        scanf("%d", &id);
+
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if (b.id == id) {
+                found = 1;
+                printf("id:- %d, Name :- %s,Author name:- %s, status:- %s\n",b.id,b.name,b.author,b.status);
+                if (strcmp(b.status, "Available") == 0) {
+                    strcpy(b.status, "Issued");
+                    printf("Book issued successfully!\n");
+                } else {
+                    printf("Book already issued \n");
+                }
             }
+            fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
         }
-        fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
+
+        if (!found) {
+            printf("%d id Book not found!\n",id);
+        }
     }
 
-    if (!found) {
-        // printf("%d id Book is not found in Library!\n",id);
-         printf("%s  Book is not found in Library!\n",name);
+   // Issue a book by its Name :--
+    else if(opt==2) {
+        getchar();
+        char name[100];
+        printf("Enter your Book name which you want to issue:- ");
+        fgets(name,sizeof(name),stdin);
+        name[strcspn(name,"\n")]= '\0';
+
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if(strcmp(name,b.name)==0){
+                found = 1;
+                printf("id:- %d, Name :- %s,Author name:- %s, status:- %s\n",b.id,b.name,b.author,b.status);
+                if (strcmp(b.status, "Available") == 0) {
+                    strcpy(b.status, "Issued");
+                    printf("\nBook issued successfully!\n");
+                } else {
+                    printf("Book already issued \n");
+                }
+            }
+            fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
+        }
+
+        if (!found) {
+            printf("%s  Book is not found in Library!\n",name);
+        }
+    }
+    else{
+        printf(" Invalid options \n");
     }
 
     fclose(fp);
@@ -146,39 +213,76 @@ void returnBook() {
     FILE *temp = fopen("temp.txt", "w");
     if (fp == NULL) {
         printf("No books found!\n");
+        if (temp) fclose(temp);
+        return;
+    }
+    if (temp == NULL) {
+        printf("Error creating temporary file!\n");
+        fclose(fp);
         return;
     }
     int found = 0 ;
-    // int id, found = 0;
-    // printf("Enter Book ID to return: ");
-    // scanf("%d", &id);
-        getchar();
-     char name[100];
-      printf("Enter your Book name which you want to Return:- ");
-    fgets(name,sizeof(name),stdin);
-    name[strcspn(name,"\n")]= '\0';
 
-    struct Book b;
-    while (fscanf(fp, "%d, %49[^,], %49[^,], %s", &b.id, b.name, b.author, b.status) != EOF) {
-        // if (b.id == id) {
-        if(strcmp(name,b.name)==0){
-            found = 1;
-         printf("id:- %d, Name :- %s,Author name:- %s, status:- %s",b.id,b.name,b.author,b.status);
-            if (strcmp(b.status, "Issued") == 0) {
-                strcpy(b.status, "Available");
-                printf("\nBook returned successfully!\n");
-            } else {
-                printf("This book was not issued!\n");
+    int opt;
+    printf("Enter 1. when you want to return a Book by its id\nEnter 2. when you want to return Book by its Name\n");
+    scanf("%d",&opt);
+
+    // Return a book by its id 
+    if (opt==1){
+        int id;
+        printf("Enter Book ID to return: ");
+        scanf("%d", &id);
+
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if (b.id == id) {
+                found = 1;
+                printf("id:- %d, Name :- %s,Author name:- %s, status:- %s\n",b.id,b.name,b.author,b.status);
+                if (strcmp(b.status, "Issued") == 0) {
+                    strcpy(b.status, "Available");
+                    printf("Book returned successfully!\n");
+                } else {
+                    printf("This book was not issued!\n");
+                }
             }
+            fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
         }
-        fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
+
+        if (!found) {
+            printf("%d id Book not found!\n",id);
+        }
     }
 
-    if (!found) {
-        // printf("%d id Book is not found in Library!\n",id);
-         printf("%s  Book is not found in Library!\n",name);
-    }
+    // Return a book by its Name 
+    else if(opt==2){
+        getchar();
+        char name[100];
+        printf("Enter your Book name which you want to Return:- ");
+        fgets(name,sizeof(name),stdin);
+        name[strcspn(name,"\n")]= '\0';
 
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if(strcmp(name,b.name)==0){
+                found = 1;
+                printf("id:- %d, Name :- %s,Author name:- %s, status:- %s\n",b.id,b.name,b.author,b.status);
+                if (strcmp(b.status, "Issued") == 0) {
+                    strcpy(b.status, "Available");
+                    printf("\nBook returned successfully!\n");
+                } else {
+                    printf("This book was not issued!\n");
+                }
+            }
+            fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
+        }
+
+        if (!found) {
+            printf("%s  Book is not found in Library!\n",name);
+        }
+    }
+    else{
+        printf("Invalid Options \n");
+    }
     fclose(fp);
     fclose(temp);
     remove("books.txt");
@@ -191,35 +295,69 @@ void deleteBook() {
     FILE *temp = fopen("temp.txt", "w");
     if (fp == NULL) {
         printf("No books found!\n");
+        if (temp) fclose(temp);
+        return;
+    }
+    if (temp == NULL) {
+        printf("Error creating temporary file!\n");
+        fclose(fp);
         return;
     }
     int found = 0 ;
-    // int id, found = 0;
-    // printf("Enter Book ID to delete: ");
-    // scanf("%d", &id);
-        getchar();
-    char name[100];
-     printf("Enter your Book name which you want to Delete:- ");
-    fgets(name,sizeof(name),stdin);
-    name[strcspn(name,"\n")]= '\0';
 
-    struct Book b;
-    while (fscanf(fp, "%d, %49[^,], %49[^,], %s", &b.id, b.name, b.author, b.status) != EOF) {
-        // if (b.id == id) {
-        if(strcmp(name,b.name)==0){
-            found = 1;
-         printf("id:- %d, Name :- %s,Author name:- %s, status:- %s",b.id,b.name,b.author,b.status);
-            printf("\nBook deleted successfully!\n");
-            continue; // skip writing this book to new file
+    int opt;
+    printf("Enter 1. when you want to delete a Book by its id\nEnter 2. when you want to delete Book by its Name\n");
+    scanf("%d",&opt);
+
+    // Delete a book by its id 
+    if(opt==1){
+        int id;
+        printf("Enter Book ID to delete: ");
+        scanf("%d", &id);
+
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if (b.id == id) {
+                found = 1;
+                printf("id:- %d, Name :- %s,Author name:- %s, status:- %s\n",b.id,b.name,b.author,b.status);
+                printf("Book deleted successfully!\n");
+                continue; // skip writing this book to new file
+            }
+            fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
         }
-        fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
+
+        if (!found) {
+            printf("%d id Book not found!\n",id);
+        }
     }
 
-    if (!found) {
-    //    printf("%d id Book is not found in Library!\n",id);
-          printf("%s id Book is not found in Library!\n",name);
+    // Delete a book by its Name 
+    else if(opt==2){
+        getchar();
+        char name[100];
+        printf("Enter your Book name which you want to Delete:- ");
+        fgets(name,sizeof(name),stdin);
+        name[strcspn(name,"\n")]= '\0';
+
+        struct Book b;
+        while (fscanf(fp, "%d,%49[^,],%49[^,],%49s", &b.id, b.name, b.author, b.status) == 4) {
+            if(strcmp(name,b.name)==0){
+                found = 1;
+                printf("id:- %d, Name :- %s,Author name:- %s, status:- %s\n",b.id,b.name,b.author,b.status);
+                printf("\nBook deleted successfully!\n");
+                continue; // skip writing this book to new file
+            }
+            fprintf(temp, "%d,%s,%s,%s\n", b.id, b.name, b.author, b.status);
+        }
+
+        if (!found) {
+            printf("%s Book is not found in Library!\n",name);
+        }
     }
 
+    else{
+        printf("Invalid option \n");
+    }
     fclose(fp);
     fclose(temp);
     remove("books.txt");
@@ -248,9 +386,8 @@ int main() {
         case 4: issueBook(); break;
         case 5: returnBook(); break;
         case 6: deleteBook(); break;
-        case 7: printf("Library closed ");
+        case 7: printf("Library closed \n");
              return 0 ;
-             
         default: printf("Invalid choice!\n");
         }
     }
