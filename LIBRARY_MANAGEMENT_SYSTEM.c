@@ -257,6 +257,3 @@ int main() {
 
     return 0;
 }
-//                     ****  MOST VVI NOTE :--->  ****
-// %49[^, ] me jo number hai wo aapki marzi ka hai, bas aapke array ke size se 
-//Bada nahi hona chahiye. Agar array 50 size ka hai → %49  Agar array 200 size ka hai → %199
